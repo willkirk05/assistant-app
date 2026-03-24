@@ -1,0 +1,103 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 700px;
+    margin: 40px auto;
+    background: #f0f2f5;
+    color: #333;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#chat {
+    background: white;
+    padding: 20px;
+    height: 450px;
+    overflow-y: auto;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.user, .bot {
+    padding: 10px 15px;
+    border-radius: 15px;
+    margin: 10px 0;
+    max-width: 80%;
+    word-wrap: break-word;
+    display: inline-block;
+}
+
+.user {
+    background: #cce5ff;
+    color: #004085;
+    align-self: flex-end;
+}
+
+.bot {
+    background: #d4edda;
+    color: #155724;
+    align-self: flex-start;
+}
+
+.user img, .bot img {
+    max-width: 250px;
+    margin-top: 5px;
+    border-radius: 8px;
+}
+
+.user a, .bot a {
+    color: #004085;
+    text-decoration: underline;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+textarea {
+    width: 100%;
+    padding: 10px;
+    resize: vertical;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+button {
+    padding: 10px;
+    border-radius: 8px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.upload label {
+    display: block;
+    margin-top: 10px;
+}
+
+select {
+    padding: 6px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+@media screen and (max-width: 500px) {
+    #chat {
+        height: 350px;
+    }
+    .user, .bot {
+        max-width: 95%;
+    }
+}
