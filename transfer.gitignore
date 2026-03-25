@@ -1,0 +1,10 @@
+# Ignore virtual environments
+venv/
+assistant-app-venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# System files
+.DS_Store
