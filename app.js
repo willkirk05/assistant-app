@@ -1,128 +1,167 @@
-const chat = document.getElementById("chat");
-const fileInput = document.getElementById("fileInput");
-const imageInput = document.getElementById("imageInput");
-const analyzeBtn = document.getElementById("analyzeFileBtn");
-
-// Load messages from localStorage
-let messages = JSON.parse(localStorage.getItem("messages")) || [
-    { role: "system", content: "You are a helpful AI school assistant. Answer questions clearly and concisely, and analyze uploaded files or images if provided." }
+// core state for messages and lightweight memory
+let messages = [
+    { role: "system", content: "You are a helpful AI assistant for school tasks. be clear and professional." }
 ];
 
-// Render previous messages on load
-messages.forEach(msg => renderMessage(msg));
+let currentMode = "school";
+let memorySummary = "";
+const MAX_CONTEXT = 6;
 
-function renderMessage(msg) {
-    let content = msg.content;
-    if (msg.type === "image") {
-        content = `<img src="${msg.content}" alt="Uploaded Image">`;
-    } else if (msg.type === "file") {
-        content = `<a href="${msg.content}" download>${msg.name || 'File'}</a>`;
-    }
-    if (msg.role === "user") {
-        chat.innerHTML += `<div class="user"><b>You:</b> ${content}</div>`;
-    } else if (msg.role === "assistant") {
-        chat.innerHTML += `<div class="bot"><b>Claude:</b> ${content}</div>`;
-    }
+// dom references
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("sendBtn");
+const modelSelect = document.getElementById("modelSelect");
+const modeSelect = document.getElementById("modeSelect");
+const fileBtn = document.getElementById("fileBtn");
+const imageBtn = document.getElementById("imageBtn");
+const fileInput = document.getElementById("fileInput");
+const imageInput = document.getElementById("imageInput");
+
+// create message bubble safely
+function appendMessage(role, text) {
+    const div = document.createElement("div");
+    div.className = role;
+
+    const label = document.createElement("b");
+    label.textContent = role === "user" ? "You: " : "Assistant: ";
+
+    const span = document.createElement("span");
+    span.textContent = text;
+
+    div.appendChild(label);
+    div.appendChild(span);
+
+    chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
 }
 
-async function sendMessage() {
-    const input = document.getElementById("input");
-    const model = document.getElementById("modelSelect").value;
-    const userText = input.value.trim();
-
-    if (!userText) return;
-
-    messages.push({ role: "user", content: userText });
-    renderMessage({ role: "user", content: userText });
-    input.value = "";
-
-    streamClaude(model);
+// return trimmed context to reduce usage
+function getRecentMessages() {
+    return messages.slice(-MAX_CONTEXT);
 }
 
-async function streamClaude(model) {
-    const loadingId = "loading-" + Date.now();
-    chat.innerHTML += `<div id="${loadingId}" class="bot">Claude is thinking...</div>`;
-    chat.scrollTop = chat.scrollHeight;
+// generate system prompt dynamically
+function getSystemPrompt(userText) {
+    if (userText.startsWith("!summary")) return "summarize the following text concisely.";
+    if (userText.startsWith("!quiz")) return "generate a short quiz (3-5 questions).";
+    if (userText.startsWith("!code") || currentMode === "code") {
+        return "you are a coding assistant. respond with code and brief comments.";
+    }
+    return "you are a helpful AI assistant for school tasks.";
+}
+
+// lightweight summarization trigger
+async function maybeSummarize() {
+    if (messages.length < 12) return;
 
     try {
-        const response = await puter.ai.chat(messages, { model: model, stream: true });
-        let botText = "";
-        for await (const part of response) {
-            botText += part?.text || "";
-            document.getElementById(loadingId).innerHTML = `<b>Claude:</b> ${botText}`;
-            chat.scrollTop = chat.scrollHeight;
-        }
-        messages.push({ role: "assistant", content: botText });
-        saveMessages();
+        const summaryPrompt = "summarize this conversation briefly in 2 sentences.";
+        const response = await puter.ai.chat(
+            [{ role: "user", content: summaryPrompt + JSON.stringify(messages.slice(0, 8)) }],
+            { model: modelSelect.value }
+        );
+
+        memorySummary = response.text || response.content || "";
+        messages = messages.slice(-MAX_CONTEXT);
     } catch (err) {
-        console.error(err);
-        document.getElementById(loadingId).innerHTML = `Error: ${err.message}`;
+        console.error("summary failed", err);
     }
 }
 
-function saveMessages() {
-    localStorage.setItem("messages", JSON.stringify(messages));
+// send message to model
+async function sendMessage(contentOverride) {
+    const userText = contentOverride || input.value.trim();
+    if (!userText) return;
+
+    appendMessage("user", userText);
+    input.value = "";
+
+    messages.push({ role: "user", content: userText });
+
+    const loadingDiv = document.createElement("div");
+    loadingDiv.className = "bot loading";
+    loadingDiv.textContent = "thinking...";
+    chat.appendChild(loadingDiv);
+    chat.scrollTop = chat.scrollHeight;
+
+    const systemPrompt = getSystemPrompt(userText);
+
+    const promptMessages = [
+        { role: "system", content: systemPrompt },
+        ...(memorySummary ? [{ role: "system", content: "previous context: " + memorySummary }] : []),
+        ...getRecentMessages()
+    ];
+
+    try {
+        const response = await puter.ai.chat(promptMessages, { model: modelSelect.value });
+        const botText = response.text || response.content || "";
+
+        loadingDiv.textContent = "";
+        loadingDiv.classList.remove("loading");
+        loadingDiv.innerHTML = `<b>Assistant:</b> ${botText}`;
+
+        messages.push({ role: "assistant", content: botText });
+
+        maybeSummarize();
+    } catch (err) {
+        loadingDiv.textContent = "error: " + err.message;
+    }
 }
 
-// Enter = send, Shift+Enter = newline
-document.getElementById("input").addEventListener("keypress", function(e) {
+// enter key behavior
+input.addEventListener("keypress", e => {
     if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
     }
 });
 
-// Enable analyze button if a file is selected
-fileInput.addEventListener("change", () => {
-    analyzeBtn.disabled = !fileInput.files.length;
+// auto resize textarea
+input.addEventListener("input", () => {
+    input.style.height = "auto";
+    input.style.height = input.scrollHeight + "px";
 });
 
-// Manual file analysis
-async function analyzeFile() {
-    const file = fileInput.files[0];
+sendBtn.addEventListener("click", () => sendMessage());
+modeSelect.addEventListener("change", () => currentMode = modeSelect.value);
+fileBtn.addEventListener("click", () => fileInput.click());
+imageBtn.addEventListener("click", () => imageInput.click());
+
+// command buttons
+document.querySelectorAll(".command-btn").forEach(btn => {
+    btn.addEventListener("click", () => sendMessage(btn.dataset.command));
+});
+
+// file upload handling
+fileInput.addEventListener("change", async e => {
+    const file = e.target.files[0];
     if (!file) return;
 
-    let textContent = "";
+    const reader = new FileReader();
+    reader.onload = async () => {
+        const text = reader.result.slice(0, 4000);
 
-    if (file.type === "application/pdf") {
-        const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent();
-            textContent += content.items.map(item => item.str).join(" ") + "\n";
-        }
-    } else {
-        textContent = await file.text();
-    }
+        appendMessage("bot", "processing file...");
 
-    // Show file message
-    messages.push({ role: "user", content: textContent, type: "file", name: file.name });
-    renderMessage({ role: "user", content: URL.createObjectURL(file), type: "file", name: file.name });
+        const prompt = `summarize:\n${text}`;
 
-    // Ask Claude to summarize/highlight
-    const loadingId = "loading-" + Date.now();
-    chat.innerHTML += `<div id="${loadingId}" class="bot">Claude is analyzing file...</div>`;
-    chat.scrollTop = chat.scrollHeight;
+        const response = await puter.ai.chat([{ role: "user", content: prompt }], { model: modelSelect.value });
+        appendMessage("bot", response.text || response.content || "");
+    };
 
-    try {
-        const model = document.getElementById("modelSelect").value;
-        const summaryResponse = await puter.ai.chat(
-            [...messages, { role: "user", content: `Please summarize and highlight key points from the above file for school purposes.` }],
-            { model: model, stream: true }
-        );
-        let botText = "";
-        for await (const part of summaryResponse) {
-            botText += part?.text || "";
-            document.getElementById(loadingId).innerHTML = `<b>Claude:</b> ${botText}`;
-            chat.scrollTop = chat.scrollHeight;
-        }
-        messages.push({ role: "assistant", content: botText });
-        saveMessages();
-    } catch (err) {
-        console.error(err);
-        document.getElementById(loadingId).innerHTML = `Error: ${err.message}`;
-    }
-    fileInput.value = "";
-    analyzeBtn.disabled = true;
-}
+    reader.readAsText(file);
+});
+
+// image upload handling
+imageInput.addEventListener("change", async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    appendMessage("bot", "analyzing image...");
+
+    const prompt = `describe an image named ${file.name}`;
+
+    const response = await puter.ai.chat([{ role: "user", content: prompt }], { model: modelSelect.value });
+    appendMessage("bot", response.text || response.content || "");
+});
