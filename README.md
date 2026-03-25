@@ -1,0 +1,2 @@
+Assistant-next-forward is an app that I created as an alternate for chat gpt for myself. I was initially searching for a way to access Claude's newest models for free or a very low cost.
+I began developing using "Puter," a cloud database that lets users access Claude and GPT models for minimal amounts of cloud storage (100mb free). The development of my app follows what I have learned at U-M so far as well as personal skills I have developed through clubs and personal research.
