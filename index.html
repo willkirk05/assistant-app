@@ -2,57 +2,118 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Assist Forward</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://js.puter.com/v2/"></script>
+    <!-- Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/python.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/javascript.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/languages/bash.min.js"></script>
+    <script>
+        // Configure marked to use highlight.js
+        document.addEventListener("DOMContentLoaded", () => {
+            marked.setOptions({
+                highlight: (code, lang) => {
+                    if (lang && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, { language: lang }).value;
+                    }
+                    return hljs.highlightAuto(code).value;
+                },
+                breaks: true,
+                gfm: true,
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="container">
 
-        <!-- header and logo -->
-        <div class="logo-container">
-            <h1>Student Assist Forward</h1>
-        </div>
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo-mark">S</div>
+                <h1>Student Assist Forward</h1>
+            </div>
+            <div class="header-badge">
+                <span class="claude-badge">Powered by Claude</span>
+            </div>
+        </header>
 
-        <!-- model, mode, and API selection -->
-        <div class="model-select-container">
-            <select id="modelSelect">
-                <option value="claude-sonnet-4-6">Sonnet 4.6</option>
-                <option value="claude-haiku-4-5">Haiku 4.5</option>
-            </select>
+        <!-- Controls -->
+        <section class="controls">
+            <div class="control-group">
+                <label for="modelSelect">Model</label>
+                <select id="modelSelect">
+                    <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+                    <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
+                    <option value="claude-opus-4-6">Claude Opus 4.6</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="modeSelect">Mode</label>
+                <select id="modeSelect">
+                    <option value="school">School</option>
+                    <option value="code">Code</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="apiModeSelect">API</label>
+                <select id="apiModeSelect">
+                    <option value="online">Online / Claude</option>
+                    <option value="offline">Offline</option>
+                </select>
+            </div>
+        </section>
 
-            <select id="modeSelect">
-                <option value="school">School</option>
-                <option value="code">Code</option>
-            </select>
+        <!-- Chat Display -->
+        <section id="chat" class="chat-container"></section>
 
-            <select id="apiModeSelect">
-                <option value="offline">Offline / Local</option>
-                <option value="online">Online / Claude</option>
-            </select>
-        </div>
+        <!-- Input Area -->
+        <section class="input-area">
+            <div class="textarea-wrapper">
+                <textarea id="input" placeholder="Ask anything... (Shift+Enter for newline)" rows="1"></textarea>
+                <span id="charCount" class="char-count"></span>
+            </div>
+            <button id="sendBtn" class="send-btn" title="Send (Enter)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </section>
 
-        <!-- chat display -->
-        <div id="chat"></div>
+        <!-- Action Buttons -->
+        <section class="action-bar">
+            <div class="action-left">
+                <button id="fileBtn" class="action-btn" title="Upload a text file">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                    File
+                </button>
+                <button id="imageBtn" class="action-btn" title="Upload an image">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                    Image
+                </button>
+            </div>
+            <div class="action-center">
+                <button class="command-btn" data-command="!summary">Summarize</button>
+                <button class="command-btn" data-command="!quiz">Quiz Me</button>
+                <button class="command-btn" data-command="!explain">Explain Simply</button>
+            </div>
+            <div class="action-right">
+                <button id="clearBtn" class="clear-btn" title="Clear conversation">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
+                    Clear
+                </button>
+            </div>
+        </section>
 
-        <!-- input area -->
-        <div class="input-area">
-            <textarea id="input" placeholder="Ask something..."></textarea>
-            <button id="sendBtn" class="send-btn">Send</button>
-        </div>
-
-        <!-- quick action buttons -->
-        <div class="button-container">
-            <button id="fileBtn">File</button>
-            <button id="imageBtn">Image</button>
-            <button class="command-btn" data-command="!summary">Summary</button>
-            <button class="command-btn" data-command="!quiz">Quiz</button>
-            <button class="command-btn" data-command="!code">Code</button>
-        </div>
-
-        <!-- hidden file/image inputs -->
-        <input type="file" id="fileInput" style="display:none;">
-        <input type="file" id="imageInput" accept="image/*" style="display:none;">
+        <!-- Hidden file inputs -->
+        <input type="file" id="fileInput" style="display:none;" accept=".txt,.md,.py,.js,.ts,.json,.csv,.html,.css">
+        <input type="file" id="imageInput" style="display:none;" accept="image/*">
 
     </div>
 
